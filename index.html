@@ -4,406 +4,363 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>Math Thread Board</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- さらに一般的な名称に変更 -->
+    <title>Academic Study Log</title>
     <style>
-        #main-content { display: none; }
-        
-        math {
-            font-family: "Latin Modern Math", "STIX Two Math", serif;
-            font-size: 1.2em;
-            vertical-align: middle;
+        :root {
+            --bg: #fafafa;
+            --card: #ffffff;
+            --text: #0f172a;
+            --border: #e2e8f0;
+            --primary: #0f172a;
+            --secondary: #64748b;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        #main-content { display: none; }
+        .hidden { display: none !important; }
+
+        math { font-size: 1.1em; }
+
+        .nav {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 24px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .input-group { margin-bottom: 20px; }
+        .label {
+            display: block;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            background: transparent;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus { border-bottom-color: var(--primary); }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .btn:hover { opacity: 0.8; }
+        .btn-ghost { background: transparent; color: var(--secondary); border: 1px solid var(--border); }
 
         .math-symbol-btn {
-            @apply px-3 py-1 bg-slate-100 hover:bg-indigo-100 border border-slate-300 rounded text-xs transition-colors font-sans;
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            margin-right: 4px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            border-radius: 3px;
         }
 
-        .post-body {
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        .post-body { white-space: pre-wrap; word-wrap: break-word; color: #334155; }
+        
+        .thread-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
         }
 
-        input[type="password"] {
-            letter-spacing: 0.3em;
+        .auth-screen {
+            position: fixed;
+            inset: 0;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
         }
 
-        .view-section { display: none; }
-        .view-active { display: block; }
+        .auth-form { width: 100%; max-width: 320px; }
+
+        .message-item {
+            border-left: 2px solid var(--border);
+            padding-left: 20px;
+            margin-bottom: 32px;
+        }
+
+        .message-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--secondary);
+            margin-bottom: 8px;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
+<body>
 
-    <!-- 認証セクション -->
-    <div id="auth-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 overflow-y-auto py-10">
-        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full mx-4">
-            <h1 id="auth-title" class="text-xl font-bold mb-6 text-center text-slate-800">ログイン</h1>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="text-[10px] text-slate-400 block mb-1 uppercase tracking-wider">ユーザー名</label>
-                    <input type="text" id="username-input" 
-                           class="w-full px-4 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-slate-400 outline-none transition"
-                           placeholder="名前を入力">
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 block mb-1 uppercase tracking-wider">パスワード</label>
-                    <input type="password" id="password-input" 
-                           class="w-full px-4 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-slate-400 outline-none transition text-center font-mono"
-                           placeholder="Password">
-                </div>
-                <div>
-                    <label class="text-[10px] text-slate-400 block mb-1 uppercase tracking-wider">共通認証コード</label>
-                    <input type="password" id="auth-code-input" 
-                           class="w-full px-4 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-slate-400 outline-none transition text-center font-bold"
-                           placeholder="Shared Code">
-                </div>
-                
-                <button id="auth-submit-btn" onclick="window.handleAuth()" 
-                        class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 rounded transition mt-2">
-                    認証して入室
-                </button>
-
-                <div class="text-center mt-4">
-                    <button id="toggle-auth-mode" onclick="window.toggleMode()" class="text-[10px] text-indigo-500 hover:underline">
-                        初めての方はこちら（新規登録）
-                    </button>
-                </div>
+    <div id="auth-overlay" class="auth-screen">
+        <div class="auth-form">
+            <h1 style="text-align:center; font-weight:300; margin-bottom:40px; font-size:24px;">Academic Archive</h1>
+            <div class="input-group">
+                <label class="label">User ID</label>
+                <input type="text" id="username-input" autocomplete="off">
             </div>
-            <p id="error-msg" class="text-red-500 text-[11px] mt-4 hidden text-center leading-relaxed"></p>
+            <div class="input-group">
+                <label class="label">Access Key</label>
+                <input type="password" id="password-input" autocomplete="new-password">
+            </div>
+            <div class="input-group">
+                <label class="label">System Code</label>
+                <input type="password" id="common-code-input" autocomplete="off">
+            </div>
+            <button onclick="window.handleAuth()" class="btn" style="width:100%; margin-top:20px;">ACCESS</button>
+            <p id="auth-error" style="color:red; font-size:11px; margin-top:20px; text-align:center; display:none;"></p>
         </div>
     </div>
 
-    <!-- メインコンテンツ -->
     <div id="main-content">
-        <nav class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
-            <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <button id="back-to-threads" onclick="window.showThreadList()" class="hidden text-slate-400 hover:text-slate-800 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <span class="font-bold text-lg tracking-widest text-slate-800 uppercase">Math Thread</span>
-                </div>
-                <div class="flex items-center gap-4">
-                    <span id="display-username" class="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full"></span>
-                    <button onclick="window.logout()" class="text-[10px] text-slate-400 hover:text-slate-600 transition underline">終了</button>
-                </div>
+        <nav class="nav">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button id="back-to-threads" onclick="window.showThreadList()" class="hidden btn-ghost" style="padding:4px 8px;">Back</button>
+                <span style="font-weight:300; font-size:20px;">Study Archive</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:16px;">
+                <span id="display-username" style="font-size:10px; color:var(--secondary);"></span>
+                <button onclick="window.logout()" style="background:none; border:none; font-size:10px; color:#ccc; cursor:pointer;">EXIT</button>
             </div>
         </nav>
 
-        <main class="max-w-4xl mx-auto px-4 py-8">
-            <section id="view-thread-list" class="view-section view-active">
-                <div class="flex justify-between items-center mb-8">
-                    <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Threads</h2>
-                    <button onclick="window.openThreadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold transition">
-                        + 新規スレッド
-                    </button>
+        <div class="container">
+            <section id="view-thread-list" class="view-section">
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:40px;">
+                    <h2 class="label">Folder List</h2>
+                    <button onclick="window.openThreadModal()" class="btn" style="padding:8px 16px; font-size:12px;">+ New Archive</button>
                 </div>
-                <div id="threads-container" class="grid gap-4">
-                    <p class="text-center text-slate-400 py-20 text-xs">読み込み中...</p>
-                </div>
+                <div id="threads-container" class="thread-grid"></div>
             </section>
 
-            <section id="view-thread-detail" class="view-section">
-                <header class="mb-8 pb-4 border-b border-slate-200">
-                    <h2 id="current-thread-title" class="text-2xl font-bold text-slate-800"></h2>
-                    <p id="current-thread-meta" class="text-xs text-slate-400 mt-1 font-mono"></p>
-                </header>
+            <section id="view-thread-detail" class="view-section hidden">
+                <h2 id="current-thread-title" style="font-weight:300; font-size:28px; margin-bottom:32px;"></h2>
 
-                <div class="bg-white p-6 rounded border border-slate-200 shadow-sm mb-10">
-                    <div class="mb-4 flex flex-wrap gap-2 border-b border-slate-50 pb-4">
+                <div class="card">
+                    <div style="margin-bottom:16px;">
                         <button class="math-symbol-btn" onclick="window.insertMath('frac')">分数</button>
-                        <button class="math-symbol-btn" onclick="window.insertMath('sqrt')">ルート</button>
-                        <button class="math-symbol-btn" onclick="window.insertMath('pow')">累乗</button>
+                        <button class="math-symbol-btn" onclick="window.insertMath('sqrt')">√</button>
+                        <button class="math-symbol-btn" onclick="window.insertMath('pow')">x²</button>
                         <button class="math-symbol-btn" onclick="window.insertMath('pi')">π</button>
                     </div>
-                    <textarea id="post-input" rows="4" 
-                        class="w-full px-4 py-3 border border-slate-300 rounded mb-4 focus:ring-1 focus:ring-slate-400 outline-none text-sm leading-relaxed"
-                        placeholder="メッセージを入力..."></textarea>
-                    <div class="flex justify-end">
-                        <button id="msg-submit-btn" onclick="window.saveMessage()" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-2 rounded text-xs font-bold transition">
-                            送信
-                        </button>
+                    <textarea id="post-input" rows="4" style="border-bottom:1px solid var(--border); margin-bottom:16px;" placeholder="Add study note..."></textarea>
+                    <div style="display:flex; justify-content:flex-end;">
+                        <button onclick="window.saveMessage()" class="btn">SAVE</button>
                     </div>
                 </div>
 
-                <div id="messages-container" class="space-y-6"></div>
+                <div id="messages-container"></div>
             </section>
-        </main>
+        </div>
     </div>
 
-    <div id="thread-modal" class="fixed inset-0 z-30 hidden items-center justify-center bg-black/50">
-        <div class="bg-white p-6 rounded-lg w-full max-w-md mx-4">
-            <h3 class="font-bold text-lg mb-4">新しいスレッドを作成</h3>
-            <input type="text" id="new-thread-title" class="w-full px-4 py-2 border border-slate-300 rounded mb-4" placeholder="スレッド名">
-            <div class="flex justify-end gap-2">
-                <button onclick="window.closeThreadModal()" class="px-4 py-2 text-xs text-slate-500">キャンセル</button>
-                <button id="create-thread-btn" onclick="window.createNewThread()" class="px-6 py-2 bg-indigo-600 text-white rounded text-xs font-bold">作成</button>
+    <div id="thread-modal" class="auth-screen hidden" style="background: rgba(255,255,255,0.95);">
+        <div class="auth-form">
+            <h3 style="font-weight:300; margin-bottom:24px;">New Folder Name</h3>
+            <input type="text" id="new-thread-title" maxlength="30" style="margin-bottom:40px;">
+            <div style="display:flex; justify-content:flex-end; gap:20px;">
+                <button onclick="window.closeThreadModal()" class="btn-ghost" style="border:none;">Cancel</button>
+                <button onclick="window.createNewThread()" class="btn">CREATE</button>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        const DB_KEY = "STORAGE_V_101";
+        const COMMON_CODE = "6174";
 
-        // Firebase Config の安全な取得
-        let firebaseConfig = {};
-        try {
-            if (typeof __firebase_config !== 'undefined') {
-                firebaseConfig = JSON.parse(__firebase_config);
-            }
-        } catch (e) {
-            console.warn("Canvas config not found. If this is GitHub Pages, please manually insert your firebaseConfig.");
+        let state = JSON.parse(localStorage.getItem(DB_KEY)) || { threads: [], messages: {} };
+        let myName = "";
+        let activeId = null;
+
+        function save() {
+            localStorage.setItem(DB_KEY, JSON.stringify(state));
         }
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        let appId = "math-board-default";
-        try {
-            if (typeof __app_id !== 'undefined') {
-                appId = __app_id;
-            }
-        } catch(e){}
+        window.handleAuth = () => {
+            const u = document.getElementById('username-input').value.trim();
+            const p = document.getElementById('password-input').value.trim();
+            const c = document.getElementById('common-code-input').value.trim();
+            const err = document.getElementById('auth-error');
 
-        const SHARED_CODE = "6174";
-        let currentUserName = "";
-        let isRegisterMode = false;
-        let activeThreadId = null;
-        let unsubscribeThreads = null;
-        let unsubscribeMessages = null;
-
-        // 匿名認証の開始
-        async function initAuth() {
-            try {
-                await signInAnonymously(auth);
-            } catch (e) {
-                console.error("Auth failed", e);
-            }
-        }
-        initAuth();
-
-        // グローバルに公開する関数（HTMLのonclickから呼ぶため）
-        window.toggleMode = () => {
-            isRegisterMode = !isRegisterMode;
-            document.getElementById('auth-title').textContent = isRegisterMode ? "新規登録" : "ログイン";
-            document.getElementById('auth-submit-btn').textContent = isRegisterMode ? "登録して入室" : "認証して入室";
-            document.getElementById('toggle-auth-mode').textContent = isRegisterMode ? "既にアカウントをお持ちの方（ログイン）" : "初めての方はこちら（新規登録）";
-            document.getElementById('error-msg').classList.add('hidden');
-        };
-
-        window.handleAuth = async () => {
-            const userIn = document.getElementById('username-input').value.trim();
-            const passIn = document.getElementById('password-input').value;
-            const authCodeIn = document.getElementById('auth-code-input').value.trim();
-            const errorEl = document.getElementById('error-msg');
-
-            if (!userIn || !passIn || !authCodeIn) {
-                errorEl.textContent = "すべての項目を入力してください。";
-                errorEl.classList.remove('hidden');
+            if (!u || !p || c !== COMMON_CODE) {
+                err.textContent = "DENIED";
+                err.style.display = "block";
                 return;
             }
 
-            if (authCodeIn !== SHARED_CODE) {
-                errorEl.textContent = "認証コードが正しくありません。";
-                errorEl.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userIn);
-                const userSnap = await getDoc(userRef);
-
-                if (isRegisterMode) {
-                    if (userSnap.exists()) {
-                        errorEl.textContent = "この名前は既に登録されています。";
-                        errorEl.classList.remove('hidden');
-                    } else {
-                        await setDoc(userRef, { password: passIn, createdAt: serverTimestamp() });
-                        enterApp(userIn);
-                    }
-                } else {
-                    if (userSnap.exists() && userSnap.data().password === passIn) {
-                        enterApp(userIn);
-                    } else {
-                        errorEl.textContent = "名前またはパスワードが正しくありません。";
-                        errorEl.classList.remove('hidden');
-                    }
-                }
-            } catch (err) {
-                errorEl.textContent = "通信エラーが発生しました。設定を確認してください。";
-                errorEl.classList.remove('hidden');
-                console.error(err);
-            }
-        };
-
-        function enterApp(name) {
-            currentUserName = name;
-            document.getElementById('display-username').textContent = name;
+            myName = u;
+            document.getElementById('display-username').textContent = u;
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
-            document.body.style.overflow = 'auto';
+            
+            if (window.location.search || window.location.hash) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
             window.showThreadList();
-        }
+        };
 
-        window.logout = () => { location.reload(); };
+        window.logout = () => { if(confirm("EXIT?")) window.location.replace(window.location.pathname); };
 
         window.showThreadList = () => {
-            activeThreadId = null;
-            if (unsubscribeMessages) unsubscribeMessages();
+            activeId = null;
             document.getElementById('back-to-threads').classList.add('hidden');
-            switchView('view-thread-list');
-            startThreadSync();
+            document.getElementById('view-thread-list').classList.remove('hidden');
+            document.getElementById('view-thread-detail').classList.add('hidden');
+            renderThreads();
         };
 
-        function switchView(id) {
-            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('view-active'));
-            document.getElementById(id).classList.add('view-active');
-            window.scrollTo(0, 0);
-        }
-
-        window.openThreadModal = () => { document.getElementById('thread-modal').classList.replace('hidden', 'flex'); };
-        window.closeThreadModal = () => { document.getElementById('thread-modal').classList.replace('flex', 'hidden'); };
-
-        window.createNewThread = async () => {
-            const titleInput = document.getElementById('new-thread-title');
-            const title = titleInput.value.trim();
-            if (!title) return;
-
-            const btn = document.getElementById('create-thread-btn');
-            btn.disabled = true;
-
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'threads'), {
-                    title: title,
-                    creator: currentUserName,
-                    createdAt: serverTimestamp()
-                });
-                titleInput.value = "";
-                window.closeThreadModal();
-            } finally {
-                btn.disabled = false;
-            }
-        };
-
-        function startThreadSync() {
-            if (unsubscribeThreads) unsubscribeThreads();
-            const q = collection(db, 'artifacts', appId, 'public', 'data', 'threads');
-            
-            unsubscribeThreads = onSnapshot(q, (snapshot) => {
-                const threads = [];
-                snapshot.forEach(doc => threads.push({ id: doc.id, ...doc.data() }));
-                threads.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                renderThreads(threads);
-            }, (err) => console.error("Thread sync failed", err));
-        }
-
-        function renderThreads(threads) {
+        function renderThreads() {
             const container = document.getElementById('threads-container');
-            if (threads.length === 0) {
-                container.innerHTML = '<p class="text-center text-slate-400 py-20 text-xs">まだスレッドがありません。</p>';
+            if (state.threads.length === 0) {
+                container.innerHTML = `<p style="color:#ccc; font-size:12px; text-align:center; grid-column:1/-1;">EMPTY</p>`;
                 return;
             }
-
-            container.innerHTML = threads.map(t => {
-                const dateStr = t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleString('ja-JP') : "...";
-                return `
-                    <div onclick="window.openThread('${t.id}', '${t.title.replace(/'/g, "\\'")}', '${t.creator.replace(/'/g, "\\'")}', '${dateStr}')" 
-                         class="bg-white p-5 rounded border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-sm group text-left w-full">
-                        <div class="flex justify-between items-start">
-                            <h3 class="font-bold text-slate-800 group-hover:text-indigo-600 transition">${t.title}</h3>
-                            <span class="text-[10px] bg-slate-50 px-2 py-1 rounded text-slate-400 font-mono">${dateStr}</span>
-                        </div>
-                        <div class="mt-2 flex items-center gap-3">
-                            <span class="text-[10px] text-slate-400">作成者: ${t.creator}</span>
-                        </div>
+            container.innerHTML = state.threads.map(t => `
+                <div onclick="window.openThread('${t.id}')" class="card" style="cursor:pointer;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <h3 style="font-size:18px;">${t.title}</h3>
+                        <button onclick="event.stopPropagation(); window.deleteThread('${t.id}')" style="background:none; border:none; color:#eee; cursor:pointer;">×</button>
                     </div>
-                `;
-            }).join('');
+                    <div style="margin-top:20px; font-size:10px; color:#ccc;">${t.createdAt}</div>
+                </div>
+            `).reverse().join('');
         }
 
-        window.openThread = (id, title, creator, date) => {
-            activeThreadId = id;
-            document.getElementById('current-thread-title').textContent = title;
-            document.getElementById('current-thread-meta').textContent = `Created by ${creator} on ${date}`;
-            document.getElementById('back-to-threads').classList.remove('hidden');
-            switchView('view-thread-detail');
-            startMessageSync(id);
-        };
-
-        window.saveMessage = async () => {
-            if (!activeThreadId) return;
-            const input = document.getElementById('post-input');
-            const content = input.value.trim();
-            if (!content) return;
-
-            const btn = document.getElementById('msg-submit-btn');
-            btn.disabled = true;
-
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'threads', activeThreadId, 'messages'), {
-                    user: currentUserName,
-                    content: content,
-                    createdAt: serverTimestamp()
-                });
-                input.value = "";
-            } finally {
-                btn.disabled = false;
+        window.deleteThread = (id) => {
+            if(confirm("DELETE?")) {
+                state.threads = state.threads.filter(t => t.id !== id);
+                delete state.messages[id];
+                save();
+                renderThreads();
             }
         };
 
-        function startMessageSync(threadId) {
-            if (unsubscribeMessages) unsubscribeMessages();
-            const q = collection(db, 'artifacts', appId, 'public', 'data', 'threads', threadId, 'messages');
-            
-            unsubscribeMessages = onSnapshot(q, (snapshot) => {
-                const messages = [];
-                snapshot.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
-                messages.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                renderMessages(messages);
-            }, (err) => console.error("Message sync failed", err));
-        }
+        window.openThreadModal = () => document.getElementById('thread-modal').classList.remove('hidden');
+        window.closeThreadModal = () => document.getElementById('thread-modal').classList.add('hidden');
 
-        function renderMessages(messages) {
+        window.createNewThread = () => {
+            const input = document.getElementById('new-thread-title');
+            const title = input.value.trim();
+            if (!title) return;
+            const id = "i_" + Date.now();
+            state.threads.push({ id, title, createdAt: new Date().toLocaleDateString('ja-JP') });
+            state.messages[id] = [];
+            save();
+            input.value = "";
+            window.closeThreadModal();
+            renderThreads();
+        };
+
+        window.openThread = (id) => {
+            activeId = id;
+            const thread = state.threads.find(t => t.id === id);
+            document.getElementById('current-thread-title').textContent = thread.title;
+            document.getElementById('back-to-threads').classList.remove('hidden');
+            document.getElementById('view-thread-list').classList.add('hidden');
+            document.getElementById('view-thread-detail').classList.remove('hidden');
+            renderMessages();
+        };
+
+        window.saveMessage = () => {
+            const input = document.getElementById('post-input');
+            if (!input.value.trim()) return;
+            state.messages[activeId].push({
+                user: myName,
+                content: input.value.trim(),
+                time: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})
+            });
+            save();
+            input.value = "";
+            renderMessages();
+        };
+
+        function renderMessages() {
             const container = document.getElementById('messages-container');
-            if (messages.length === 0) {
-                container.innerHTML = '<p class="text-center text-slate-400 py-10 text-xs">まだメッセージがありません。</p>';
+            const msgs = state.messages[activeId] || [];
+            if (msgs.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#ccc; font-size:10px;">NO NOTES</p>';
                 return;
             }
-
-            container.innerHTML = messages.map(m => {
-                const dateStr = m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleString('ja-JP') : "...";
-                return `
-                    <article class="bg-white p-5 rounded border border-slate-200">
-                        <div class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
-                            <span class="text-xs font-bold text-slate-700">${m.user}</span>
-                            <time class="text-[9px] text-slate-400 font-mono">${dateStr}</time>
-                        </div>
-                        <div class="post-body text-sm leading-relaxed text-slate-800">${m.content}</div>
-                    </article>
-                `;
-            }).join('');
+            container.innerHTML = msgs.map(m => `
+                <div class="message-item">
+                    <div class="message-meta"><span>${m.user}</span><span>${m.time}</span></div>
+                    <div class="post-body">${m.content}</div>
+                </div>
+            `).reverse().join('');
         }
 
         window.insertMath = (type) => {
-            const textarea = document.getElementById('post-input');
-            let snippet = "";
+            const area = document.getElementById('post-input');
+            let snip = "";
             switch(type) {
-                case 'frac': snippet = '<math><mfrac><mrow>分子</mrow><mrow>分母</mrow></mfrac></math>'; break;
-                case 'sqrt': snippet = '<math><msqrt>x</msqrt></math>'; break;
-                case 'pow': snippet = '<math><msup><mi>x</mi><mn>2</mn></msup></math>'; break;
-                case 'pi': snippet = '<math><mi>π</mi></math>'; break;
+                case 'frac': snip = '<math><mfrac><mrow>N</mrow><mrow>D</mrow></mfrac></math>'; break;
+                case 'sqrt': snip = '<math><msqrt>x</msqrt></math>'; break;
+                case 'pow': snip = '<math><msup><mi>x</mi><mn>2</mn></msup></math>'; break;
+                case 'pi': snip = '<math><mi>π</mi></math>'; break;
             }
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            textarea.value = textarea.value.substring(0, start) + snippet + textarea.value.substring(end);
-            textarea.focus();
+            const pos = area.selectionStart;
+            area.value = area.value.slice(0, pos) + snip + area.value.slice(area.selectionEnd);
+            area.focus();
         };
+
+        window.onload = () => { if (window.location.hash) window.history.replaceState({}, document.title, window.location.pathname); };
     </script>
 </body>
 </html>
