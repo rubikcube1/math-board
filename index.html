@@ -103,7 +103,8 @@
                     </button>
                 </div>
                 <div id="threads-container" class="grid gap-4">
-                    <!-- スレッドがここに表示される -->
+                    <!-- Loading state -->
+                    <p class="text-center text-slate-400 py-20 text-xs">読み込み中...</p>
                 </div>
             </section>
 
@@ -126,7 +127,7 @@
                         class="w-full px-4 py-3 border border-slate-300 rounded mb-4 focus:ring-1 focus:ring-slate-400 outline-none text-sm leading-relaxed"
                         placeholder="メッセージを入力..."></textarea>
                     <div class="flex justify-end">
-                        <button onclick="saveMessage()" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-2 rounded text-xs font-bold transition">
+                        <button id="msg-submit-btn" onclick="saveMessage()" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-2 rounded text-xs font-bold transition">
                             送信
                         </button>
                     </div>
@@ -146,32 +147,60 @@
             <input type="text" id="new-thread-title" class="w-full px-4 py-2 border border-slate-300 rounded mb-4" placeholder="スレッド名">
             <div class="flex justify-end gap-2">
                 <button onclick="closeThreadModal()" class="px-4 py-2 text-xs text-slate-500">キャンセル</button>
-                <button onclick="createNewThread()" class="px-6 py-2 bg-indigo-600 text-white rounded text-xs font-bold">作成</button>
+                <button id="create-thread-btn" onclick="createNewThread()" class="px-6 py-2 bg-indigo-600 text-white rounded text-xs font-bold">作成</button>
             </div>
         </div>
     </div>
 
-    <script>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Variables
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
         const SHARED_CODE = "6174";
         let currentUserName = "";
         let isRegisterMode = false;
         let activeThreadId = null;
+        let currentUser = null;
+        let unsubscribeThreads = null;
+        let unsubscribeMessages = null;
+
+        // Initialize Auth
+        async function init() {
+            try {
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                });
+            } catch (e) {
+                console.error("Auth initialization failed", e);
+            }
+        }
+        init();
 
         // 認証
-        function toggleMode() {
+        window.toggleMode = () => {
             isRegisterMode = !isRegisterMode;
             document.getElementById('auth-title').textContent = isRegisterMode ? "新規登録" : "ログイン";
             document.getElementById('auth-submit-btn').textContent = isRegisterMode ? "登録して入室" : "認証して入室";
             document.getElementById('toggle-auth-mode').textContent = isRegisterMode ? "既にアカウントをお持ちの方（ログイン）" : "初めての方はこちら（新規登録）";
             document.getElementById('error-msg').classList.add('hidden');
-        }
+        };
 
-        function handleAuth() {
+        window.handleAuth = async () => {
+            if (!currentUser) return;
             const userIn = document.getElementById('username-input').value.trim();
             const passIn = document.getElementById('password-input').value;
             const authCodeIn = document.getElementById('auth-code-input').value.trim();
             const errorEl = document.getElementById('error-msg');
-            let users = JSON.parse(localStorage.getItem('board_users') || '{}');
 
             if (!userIn || !passIn || !authCodeIn) {
                 errorEl.textContent = "すべての項目を入力してください。";
@@ -185,24 +214,26 @@
                 return;
             }
 
+            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userIn);
+            const userSnap = await getDoc(userRef);
+
             if (isRegisterMode) {
-                if (users[userIn]) {
+                if (userSnap.exists()) {
                     errorEl.textContent = "この名前は既に登録されています。";
                     errorEl.classList.remove('hidden');
                 } else {
-                    users[userIn] = passIn;
-                    localStorage.setItem('board_users', JSON.stringify(users));
+                    await setDoc(userRef, { password: passIn, createdAt: serverTimestamp() });
                     enterApp(userIn);
                 }
             } else {
-                if (users[userIn] === passIn) {
+                if (userSnap.exists() && userSnap.data().password === passIn) {
                     enterApp(userIn);
                 } else {
-                    errorEl.textContent = "認証に失敗しました。";
+                    errorEl.textContent = "名前またはパスワードが正しくありません。";
                     errorEl.classList.remove('hidden');
                 }
             }
-        }
+        };
 
         function enterApp(name) {
             currentUserName = name;
@@ -213,15 +244,16 @@
             showThreadList();
         }
 
-        function logout() { location.reload(); }
+        window.logout = () => { location.reload(); };
 
         // スレッド管理
-        function showThreadList() {
+        window.showThreadList = () => {
             activeThreadId = null;
+            if (unsubscribeMessages) unsubscribeMessages();
             document.getElementById('back-to-threads').classList.add('hidden');
             switchView('view-thread-list');
-            renderThreads();
-        }
+            startThreadSync();
+        };
 
         function switchView(id) {
             document.querySelectorAll('.view-section').forEach(s => s.classList.remove('view-active'));
@@ -229,106 +261,133 @@
             window.scrollTo(0, 0);
         }
 
-        function openThreadModal() { document.getElementById('thread-modal').classList.replace('hidden', 'flex'); }
-        function closeThreadModal() { document.getElementById('thread-modal').classList.replace('flex', 'hidden'); }
+        window.openThreadModal = () => { document.getElementById('thread-modal').classList.replace('hidden', 'flex'); };
+        window.closeThreadModal = () => { document.getElementById('thread-modal').classList.replace('flex', 'hidden'); };
 
-        function createNewThread() {
-            const title = document.getElementById('new-thread-title').value.trim();
+        window.createNewThread = async () => {
+            if (!currentUser) return;
+            const titleInput = document.getElementById('new-thread-title');
+            const title = titleInput.value.trim();
             if (!title) return;
 
-            const threads = JSON.parse(localStorage.getItem('math_threads_v7') || '[]');
-            const newThread = {
-                id: Date.now(),
-                title: title,
-                creator: currentUserName,
-                date: new Date().toLocaleString('ja-JP'),
-                messageCount: 0
-            };
-            threads.unshift(newThread);
-            localStorage.setItem('math_threads_v7', JSON.stringify(threads));
-            document.getElementById('new-thread-title').value = "";
-            closeThreadModal();
-            renderThreads();
+            const btn = document.getElementById('create-thread-btn');
+            btn.disabled = true;
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'threads'), {
+                    title: title,
+                    creator: currentUserName,
+                    createdAt: serverTimestamp()
+                });
+                titleInput.value = "";
+                closeThreadModal();
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        function startThreadSync() {
+            if (unsubscribeThreads) unsubscribeThreads();
+            const q = collection(db, 'artifacts', appId, 'public', 'data', 'threads');
+            
+            unsubscribeThreads = onSnapshot(q, (snapshot) => {
+                const threads = [];
+                snapshot.forEach(doc => threads.push({ id: doc.id, ...doc.data() }));
+                // シンプルな日付ソート
+                threads.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                renderThreads(threads);
+            }, (err) => console.error("Thread sync failed", err));
         }
 
-        function renderThreads() {
+        function renderThreads(threads) {
             const container = document.getElementById('threads-container');
-            const threads = JSON.parse(localStorage.getItem('math_threads_v7') || '[]');
-            
             if (threads.length === 0) {
                 container.innerHTML = '<p class="text-center text-slate-400 py-20 text-xs">まだスレッドがありません。</p>';
                 return;
             }
 
-            container.innerHTML = threads.map(t => `
-                <div onclick="openThread(${t.id})" class="bg-white p-5 rounded border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-sm group">
-                    <div class="flex justify-between items-start">
-                        <h3 class="font-bold text-slate-800 group-hover:text-indigo-600 transition">${t.title}</h3>
-                        <span class="text-[10px] bg-slate-50 px-2 py-1 rounded text-slate-400 font-mono">${t.date}</span>
+            container.innerHTML = threads.map(t => {
+                const dateStr = t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleString('ja-JP') : "...";
+                return `
+                    <div onclick="window.openThread('${t.id}', '${t.title}', '${t.creator}', '${dateStr}')" 
+                         class="bg-white p-5 rounded border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-sm group">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-slate-800 group-hover:text-indigo-600 transition">${t.title}</h3>
+                            <span class="text-[10px] bg-slate-50 px-2 py-1 rounded text-slate-400 font-mono">${dateStr}</span>
+                        </div>
+                        <div class="mt-2 flex items-center gap-3">
+                            <span class="text-[10px] text-slate-400">作成者: ${t.creator}</span>
+                        </div>
                     </div>
-                    <div class="mt-2 flex items-center gap-3">
-                        <span class="text-[10px] text-slate-400">作成者: ${t.creator}</span>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        function openThread(id) {
-            const threads = JSON.parse(localStorage.getItem('math_threads_v7') || '[]');
-            const thread = threads.find(t => t.id === id);
-            if (!thread) return;
-
+        window.openThread = (id, title, creator, date) => {
             activeThreadId = id;
-            document.getElementById('current-thread-title').textContent = thread.title;
-            document.getElementById('current-thread-meta').textContent = `Created by ${thread.creator} on ${thread.date}`;
+            document.getElementById('current-thread-title').textContent = title;
+            document.getElementById('current-thread-meta').textContent = `Created by ${creator} on ${date}`;
             document.getElementById('back-to-threads').classList.remove('hidden');
             switchView('view-thread-detail');
-            renderMessages();
-        }
+            startMessageSync(id);
+        };
 
         // メッセージ管理
-        function saveMessage() {
-            const content = document.getElementById('post-input').value.trim();
-            if (!content || !activeThreadId) return;
+        window.saveMessage = async () => {
+            if (!currentUser || !activeThreadId) return;
+            const input = document.getElementById('post-input');
+            const content = input.value.trim();
+            if (!content) return;
 
-            const allMessages = JSON.parse(localStorage.getItem('math_messages_v7') || '{}');
-            if (!allMessages[activeThreadId]) allMessages[activeThreadId] = [];
+            const btn = document.getElementById('msg-submit-btn');
+            btn.disabled = true;
 
-            const newMessage = {
-                id: Date.now(),
-                user: currentUserName,
-                content: content,
-                date: new Date().toLocaleString('ja-JP')
-            };
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'threads', activeThreadId, 'messages'), {
+                    user: currentUserName,
+                    content: content,
+                    createdAt: serverTimestamp()
+                });
+                input.value = "";
+            } finally {
+                btn.disabled = false;
+            }
+        };
 
-            allMessages[activeThreadId].unshift(newMessage);
-            localStorage.setItem('math_messages_v7', JSON.stringify(allMessages));
-            document.getElementById('post-input').value = "";
-            renderMessages();
+        function startMessageSync(threadId) {
+            if (unsubscribeMessages) unsubscribeMessages();
+            const q = collection(db, 'artifacts', appId, 'public', 'data', 'threads', threadId, 'messages');
+            
+            unsubscribeMessages = onSnapshot(q, (snapshot) => {
+                const messages = [];
+                snapshot.forEach(doc => messages.push({ id: doc.id, ...doc.data() }));
+                messages.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                renderMessages(messages);
+            }, (err) => console.error("Message sync failed", err));
         }
 
-        function renderMessages() {
+        function renderMessages(messages) {
             const container = document.getElementById('messages-container');
-            const allMessages = JSON.parse(localStorage.getItem('math_messages_v7') || '{}');
-            const messages = allMessages[activeThreadId] || [];
-
             if (messages.length === 0) {
                 container.innerHTML = '<p class="text-center text-slate-400 py-10 text-xs">まだメッセージがありません。</p>';
                 return;
             }
 
-            container.innerHTML = messages.map(m => `
-                <article class="bg-white p-5 rounded border border-slate-200">
-                    <div class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
-                        <span class="text-xs font-bold text-slate-700">${m.user}</span>
-                        <time class="text-[9px] text-slate-400 font-mono">${m.date}</time>
-                    </div>
-                    <div class="post-body text-sm leading-relaxed text-slate-800">${m.content}</div>
-                </article>
-            `).join('');
+            container.innerHTML = messages.map(m => {
+                const dateStr = m.createdAt ? new Date(m.createdAt.seconds * 1000).toLocaleString('ja-JP') : "...";
+                return `
+                    <article class="bg-white p-5 rounded border border-slate-200">
+                        <div class="flex justify-between items-center mb-3 border-b border-slate-50 pb-2">
+                            <span class="text-xs font-bold text-slate-700">${m.user}</span>
+                            <time class="text-[9px] text-slate-400 font-mono">${dateStr}</time>
+                        </div>
+                        <div class="post-body text-sm leading-relaxed text-slate-800">${m.content}</div>
+                    </article>
+                `;
+            }).join('');
         }
 
-        function insertMath(type) {
+        window.insertMath = (type) => {
             const textarea = document.getElementById('post-input');
             let snippet = "";
             switch(type) {
@@ -341,9 +400,7 @@
             const end = textarea.selectionEnd;
             textarea.value = textarea.value.substring(0, start) + snippet + textarea.value.substring(end);
             textarea.focus();
-        }
-
-        document.body.style.overflow = 'hidden';
+        };
     </script>
 </body>
 </html>
