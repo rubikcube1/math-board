@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Math and Text Thread Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #main-content { display: none; }
+        
+        math {
+            font-family: "Latin Modern Math", "STIX Two Math", serif;
+            font-size: 1.2em;
+            vertical-align: middle;
+        }
+
+        .math-symbol-btn {
+            @apply px-3 py-1 bg-slate-100 hover:bg-indigo-100 border border-slate-300 rounded text-xs transition-colors font-sans;
+        }
+
+        .post-body {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen font-sans">
+
+    <!-- 認証セクション -->
+    <div id="auth-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+        <div class="bg-white p-8 rounded-lg shadow-2xl max-w-sm w-full mx-4">
+            <h1 class="text-xl font-bold mb-6 text-center text-slate-800">認証が必要です</h1>
+            <p class="text-sm text-slate-500 mb-4 text-center">10桁のパスワードを入力してください</p>
+            <input type="password" id="password-input" 
+                   class="w-full px-4 py-3 border border-slate-300 rounded mb-4 focus:ring-2 focus:ring-slate-400 outline-none transition text-center tracking-widest"
+                   placeholder="10桁の数字">
+            <button onclick="checkPassword()" 
+                    class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 rounded transition">
+                認証
+            </button>
+            <p id="error-msg" class="text-red-500 text-sm mt-3 hidden text-center">パスワードが正しくありません</p>
+        </div>
+    </div>
+
+    <!-- メインコンテンツ -->
+    <div id="main-content">
+        <nav class="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+            <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+                <span class="font-bold text-lg tracking-widest text-slate-800">MATH THREAD BOARD</span>
+                <button onclick="logout()" class="text-xs text-slate-400 hover:text-slate-600 transition underline">ログアウト</button>
+            </div>
+        </nav>
+
+        <main class="max-w-4xl mx-auto px-4 py-8">
+            <!-- 投稿フォーム -->
+            <section class="bg-white p-6 rounded border border-slate-200 shadow-sm mb-10">
+                <h2 class="text-sm font-bold mb-4 text-slate-600 uppercase tracking-tighter">新規メッセージ投稿</h2>
+                
+                <div class="mb-4 flex flex-wrap gap-2 border-b border-slate-50 pb-4">
+                    <span class="text-xs text-slate-400 self-center mr-2">数式挿入:</span>
+                    <button class="math-symbol-btn" onclick="insertMath('frac')">分数</button>
+                    <button class="math-symbol-btn" onclick="insertMath('sqrt')">ルート</button>
+                    <button class="math-symbol-btn" onclick="insertMath('pow')">累乗</button>
+                    <button class="math-symbol-btn" onclick="insertMath('pm')">プラスマイナス</button>
+                    <button class="math-symbol-btn" onclick="insertMath('pi')">パイ</button>
+                    <button class="math-symbol-btn" onclick="insertMath('int')">積分</button>
+                </div>
+
+                <textarea id="post-input" rows="5" 
+                    class="w-full px-4 py-3 border border-slate-300 rounded mb-4 focus:ring-1 focus:ring-slate-400 outline-none text-sm leading-relaxed"
+                    placeholder="ここに文章や数式を入力してください..."></textarea>
+                
+                <div class="flex justify-between items-center">
+                    <div class="text-[10px] text-slate-400">
+                        文章の中に数式タグを埋め込むことができます
+                    </div>
+                    <button onclick="savePost()" 
+                        class="bg-slate-800 hover:bg-slate-700 text-white px-10 py-2 rounded text-sm font-bold transition">
+                        投稿内容を送信
+                    </button>
+                </div>
+            </section>
+
+            <!-- メッセージ一覧 -->
+            <div class="space-y-6" id="thread-container">
+                <!-- 投稿がここに表示されます -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // パスワード設定（新しいランダムな10桁の数字）
+        const correctPw = "5820491736"; 
+
+        function checkPassword() {
+            const input = document.getElementById('password-input').value;
+            if (input === correctPw) {
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                document.body.style.overflow = 'auto';
+                loadPosts();
+            } else {
+                document.getElementById('error-msg').classList.remove('hidden');
+                document.getElementById('password-input').value = "";
+            }
+        }
+
+        function logout() { location.reload(); }
+
+        function insertMath(type) {
+            const textarea = document.getElementById('post-input');
+            let snippet = "";
+            
+            switch(type) {
+                case 'frac': snippet = '<math><mfrac><mrow>分子</mrow><mrow>分母</mrow></mfrac></math>'; break;
+                case 'sqrt': snippet = '<math><msqrt>x</msqrt></math>'; break;
+                case 'pow': snippet = '<math><msup><mi>x</mi><mn>2</mn></msup></math>'; break;
+                case 'pm': snippet = '<math><mo>±</mo></math>'; break;
+                case 'pi': snippet = '<math><mi>π</mi></math>'; break;
+                case 'int': snippet = '<math><msubsup><mo>∫</mo><mi>a</mi><mi>b</mi></msubsup></math>'; break;
+            }
+            
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            textarea.value = textarea.value.substring(0, start) + snippet + textarea.value.substring(end);
+            textarea.focus();
+        }
+
+        function savePost() {
+            const content = document.getElementById('post-input').value.trim();
+            if (!content) return;
+
+            const posts = JSON.parse(localStorage.getItem('math_posts_v3') || '[]');
+            const newPost = {
+                id: Date.now(),
+                content: content,
+                date: new Date().toLocaleString('ja-JP')
+            };
+            
+            posts.unshift(newPost);
+            localStorage.setItem('math_posts_v3', JSON.stringify(posts));
+            document.getElementById('post-input').value = "";
+            loadPosts();
+        }
+
+        function loadPosts() {
+            const container = document.getElementById('thread-container');
+            const posts = JSON.parse(localStorage.getItem('math_posts_v3') || '[]');
+            
+            if (posts.length === 0) {
+                container.innerHTML = '<p class="text-center text-slate-400 py-10 text-sm">投稿されたメッセージはありません</p>';
+                return;
+            }
+
+            container.innerHTML = posts.map(post => `
+                <article class="bg-white p-6 rounded border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-4 border-b border-slate-50 pb-2">
+                        <span class="text-[10px] font-mono text-slate-400">ID: ${post.id}</span>
+                        <time class="text-[10px] text-slate-400">${post.date}</time>
+                    </div>
+                    <div class="post-body text-sm leading-loose text-slate-800">
+                        ${post.content}
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button onclick="deletePost(${post.id})" class="text-[10px] text-slate-300 hover:text-red-500 transition underline">削除する</button>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function deletePost(id) {
+            let posts = JSON.parse(localStorage.getItem('math_posts_v3') || '[]');
+            posts = posts.filter(p => p.id !== id);
+            localStorage.setItem('math_posts_v3', JSON.stringify(posts));
+            loadPosts();
+        }
+
+        document.body.style.overflow = 'hidden';
+        document.getElementById('password-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkPassword();
+        });
+    </script>
+</body>
+</html>
