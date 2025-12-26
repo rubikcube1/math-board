@@ -59,13 +59,13 @@
                            placeholder="Shared Code">
                 </div>
                 
-                <button id="auth-submit-btn" onclick="handleAuth()" 
+                <button id="auth-submit-btn" onclick="window.handleAuth()" 
                         class="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3 rounded transition mt-2">
                     認証して入室
                 </button>
 
                 <div class="text-center mt-4">
-                    <button id="toggle-auth-mode" onclick="toggleMode()" class="text-[10px] text-indigo-500 hover:underline">
+                    <button id="toggle-auth-mode" onclick="window.toggleMode()" class="text-[10px] text-indigo-500 hover:underline">
                         初めての方はこちら（新規登録）
                     </button>
                 </div>
@@ -79,7 +79,7 @@
         <nav class="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
             <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <button id="back-to-threads" onclick="showThreadList()" class="hidden text-slate-400 hover:text-slate-800 transition">
+                    <button id="back-to-threads" onclick="window.showThreadList()" class="hidden text-slate-400 hover:text-slate-800 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                         </svg>
@@ -88,82 +88,86 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <span id="display-username" class="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full"></span>
-                    <button onclick="logout()" class="text-[10px] text-slate-400 hover:text-slate-600 transition underline">終了</button>
+                    <button onclick="window.logout()" class="text-[10px] text-slate-400 hover:text-slate-600 transition underline">終了</button>
                 </div>
             </div>
         </nav>
 
         <main class="max-w-4xl mx-auto px-4 py-8">
-            <!-- スレッド一覧ビュー -->
             <section id="view-thread-list" class="view-section view-active">
                 <div class="flex justify-between items-center mb-8">
                     <h2 class="text-sm font-bold text-slate-500 uppercase tracking-widest">Threads</h2>
-                    <button onclick="openThreadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold transition">
+                    <button onclick="window.openThreadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold transition">
                         + 新規スレッド
                     </button>
                 </div>
                 <div id="threads-container" class="grid gap-4">
-                    <!-- Loading state -->
                     <p class="text-center text-slate-400 py-20 text-xs">読み込み中...</p>
                 </div>
             </section>
 
-            <!-- メッセージ表示ビュー -->
             <section id="view-thread-detail" class="view-section">
                 <header class="mb-8 pb-4 border-b border-slate-200">
                     <h2 id="current-thread-title" class="text-2xl font-bold text-slate-800"></h2>
                     <p id="current-thread-meta" class="text-xs text-slate-400 mt-1 font-mono"></p>
                 </header>
 
-                <!-- メッセージ投稿 -->
                 <div class="bg-white p-6 rounded border border-slate-200 shadow-sm mb-10">
                     <div class="mb-4 flex flex-wrap gap-2 border-b border-slate-50 pb-4">
-                        <button class="math-symbol-btn" onclick="insertMath('frac')">分数</button>
-                        <button class="math-symbol-btn" onclick="insertMath('sqrt')">ルート</button>
-                        <button class="math-symbol-btn" onclick="insertMath('pow')">累乗</button>
-                        <button class="math-symbol-btn" onclick="insertMath('pi')">π</button>
+                        <button class="math-symbol-btn" onclick="window.insertMath('frac')">分数</button>
+                        <button class="math-symbol-btn" onclick="window.insertMath('sqrt')">ルート</button>
+                        <button class="math-symbol-btn" onclick="window.insertMath('pow')">累乗</button>
+                        <button class="math-symbol-btn" onclick="window.insertMath('pi')">π</button>
                     </div>
                     <textarea id="post-input" rows="4" 
                         class="w-full px-4 py-3 border border-slate-300 rounded mb-4 focus:ring-1 focus:ring-slate-400 outline-none text-sm leading-relaxed"
                         placeholder="メッセージを入力..."></textarea>
                     <div class="flex justify-end">
-                        <button id="msg-submit-btn" onclick="saveMessage()" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-2 rounded text-xs font-bold transition">
+                        <button id="msg-submit-btn" onclick="window.saveMessage()" class="bg-slate-800 hover:bg-slate-700 text-white px-8 py-2 rounded text-xs font-bold transition">
                             送信
                         </button>
                     </div>
                 </div>
 
-                <div id="messages-container" class="space-y-6">
-                    <!-- メッセージがここに表示される -->
-                </div>
+                <div id="messages-container" class="space-y-6"></div>
             </section>
         </main>
     </div>
 
-    <!-- スレッド作成モーダル -->
     <div id="thread-modal" class="fixed inset-0 z-30 hidden items-center justify-center bg-black/50">
         <div class="bg-white p-6 rounded-lg w-full max-w-md mx-4">
             <h3 class="font-bold text-lg mb-4">新しいスレッドを作成</h3>
             <input type="text" id="new-thread-title" class="w-full px-4 py-2 border border-slate-300 rounded mb-4" placeholder="スレッド名">
             <div class="flex justify-end gap-2">
-                <button onclick="closeThreadModal()" class="px-4 py-2 text-xs text-slate-500">キャンセル</button>
-                <button id="create-thread-btn" onclick="createNewThread()" class="px-6 py-2 bg-indigo-600 text-white rounded text-xs font-bold">作成</button>
+                <button onclick="window.closeThreadModal()" class="px-4 py-2 text-xs text-slate-500">キャンセル</button>
+                <button id="create-thread-btn" onclick="window.createNewThread()" class="px-6 py-2 bg-indigo-600 text-white rounded text-xs font-bold">作成</button>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global Variables
-        const firebaseConfig = JSON.parse(__firebase_config);
+        // --- 注意: GitHubで公開する場合は、以下のfirebaseConfigを自分のFirebaseコンソールの内容に書き換えてください ---
+        let firebaseConfig = {};
+        try {
+            // Canvas環境の自動設定を試みる
+            firebaseConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            // GitHub Pagesなどで動かす場合は、ここに自分のFirebase設定を貼り付けます
+            // firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", ... };
+            console.error("Firebase config is missing. Please set your config in the code.");
+        }
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // App IDの設定（GitHub公開時は固定の文字列を推奨）
+        let appId = "math-board-default";
+        try { appId = typeof __app_id !== 'undefined' ? __app_id : appId; } catch(e){}
 
         const SHARED_CODE = "6174";
         let currentUserName = "";
@@ -173,20 +177,16 @@
         let unsubscribeThreads = null;
         let unsubscribeMessages = null;
 
-        // Initialize Auth
         async function init() {
             try {
-                await signInAnonymously(auth);
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user;
-                });
+                const user = await signInAnonymously(auth);
+                currentUser = user.user;
             } catch (e) {
-                console.error("Auth initialization failed", e);
+                console.error("Auth failed", e);
             }
         }
         init();
 
-        // 認証
         window.toggleMode = () => {
             isRegisterMode = !isRegisterMode;
             document.getElementById('auth-title').textContent = isRegisterMode ? "新規登録" : "ログイン";
@@ -196,7 +196,6 @@
         };
 
         window.handleAuth = async () => {
-            if (!currentUser) return;
             const userIn = document.getElementById('username-input').value.trim();
             const passIn = document.getElementById('password-input').value;
             const authCodeIn = document.getElementById('auth-code-input').value.trim();
@@ -241,12 +240,11 @@
             document.getElementById('auth-overlay').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             document.body.style.overflow = 'auto';
-            showThreadList();
+            window.showThreadList();
         }
 
         window.logout = () => { location.reload(); };
 
-        // スレッド管理
         window.showThreadList = () => {
             activeThreadId = null;
             if (unsubscribeMessages) unsubscribeMessages();
@@ -265,7 +263,6 @@
         window.closeThreadModal = () => { document.getElementById('thread-modal').classList.replace('flex', 'hidden'); };
 
         window.createNewThread = async () => {
-            if (!currentUser) return;
             const titleInput = document.getElementById('new-thread-title');
             const title = titleInput.value.trim();
             if (!title) return;
@@ -280,7 +277,7 @@
                     createdAt: serverTimestamp()
                 });
                 titleInput.value = "";
-                closeThreadModal();
+                window.closeThreadModal();
             } finally {
                 btn.disabled = false;
             }
@@ -293,7 +290,6 @@
             unsubscribeThreads = onSnapshot(q, (snapshot) => {
                 const threads = [];
                 snapshot.forEach(doc => threads.push({ id: doc.id, ...doc.data() }));
-                // シンプルな日付ソート
                 threads.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
                 renderThreads(threads);
             }, (err) => console.error("Thread sync failed", err));
@@ -309,8 +305,8 @@
             container.innerHTML = threads.map(t => {
                 const dateStr = t.createdAt ? new Date(t.createdAt.seconds * 1000).toLocaleString('ja-JP') : "...";
                 return `
-                    <div onclick="window.openThread('${t.id}', '${t.title}', '${t.creator}', '${dateStr}')" 
-                         class="bg-white p-5 rounded border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-sm group">
+                    <div onclick="window.openThread('${t.id}', '${t.title.replace(/'/g, "\\'")}', '${t.creator.replace(/'/g, "\\'")}', '${dateStr}')" 
+                         class="bg-white p-5 rounded border border-slate-200 hover:border-indigo-300 transition cursor-pointer shadow-sm group text-left w-full">
                         <div class="flex justify-between items-start">
                             <h3 class="font-bold text-slate-800 group-hover:text-indigo-600 transition">${t.title}</h3>
                             <span class="text-[10px] bg-slate-50 px-2 py-1 rounded text-slate-400 font-mono">${dateStr}</span>
@@ -332,9 +328,8 @@
             startMessageSync(id);
         };
 
-        // メッセージ管理
         window.saveMessage = async () => {
-            if (!currentUser || !activeThreadId) return;
+            if (!activeThreadId) return;
             const input = document.getElementById('post-input');
             const content = input.value.trim();
             if (!content) return;
