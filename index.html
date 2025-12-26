@@ -150,43 +150,45 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- 注意: GitHubで公開する場合は、以下のfirebaseConfigを自分のFirebaseコンソールの内容に書き換えてください ---
+        // Firebase Config の安全な取得
         let firebaseConfig = {};
         try {
-            // Canvas環境の自動設定を試みる
-            firebaseConfig = JSON.parse(__firebase_config);
+            if (typeof __firebase_config !== 'undefined') {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
         } catch (e) {
-            // GitHub Pagesなどで動かす場合は、ここに自分のFirebase設定を貼り付けます
-            // firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", ... };
-            console.error("Firebase config is missing. Please set your config in the code.");
+            console.warn("Canvas config not found. If this is GitHub Pages, please manually insert your firebaseConfig.");
         }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // App IDの設定（GitHub公開時は固定の文字列を推奨）
         let appId = "math-board-default";
-        try { appId = typeof __app_id !== 'undefined' ? __app_id : appId; } catch(e){}
+        try {
+            if (typeof __app_id !== 'undefined') {
+                appId = __app_id;
+            }
+        } catch(e){}
 
         const SHARED_CODE = "6174";
         let currentUserName = "";
         let isRegisterMode = false;
         let activeThreadId = null;
-        let currentUser = null;
         let unsubscribeThreads = null;
         let unsubscribeMessages = null;
 
-        async function init() {
+        // 匿名認証の開始
+        async function initAuth() {
             try {
-                const user = await signInAnonymously(auth);
-                currentUser = user.user;
+                await signInAnonymously(auth);
             } catch (e) {
                 console.error("Auth failed", e);
             }
         }
-        init();
+        initAuth();
 
+        // グローバルに公開する関数（HTMLのonclickから呼ぶため）
         window.toggleMode = () => {
             isRegisterMode = !isRegisterMode;
             document.getElementById('auth-title').textContent = isRegisterMode ? "新規登録" : "ログイン";
@@ -213,24 +215,30 @@
                 return;
             }
 
-            const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userIn);
-            const userSnap = await getDoc(userRef);
+            try {
+                const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userIn);
+                const userSnap = await getDoc(userRef);
 
-            if (isRegisterMode) {
-                if (userSnap.exists()) {
-                    errorEl.textContent = "この名前は既に登録されています。";
-                    errorEl.classList.remove('hidden');
+                if (isRegisterMode) {
+                    if (userSnap.exists()) {
+                        errorEl.textContent = "この名前は既に登録されています。";
+                        errorEl.classList.remove('hidden');
+                    } else {
+                        await setDoc(userRef, { password: passIn, createdAt: serverTimestamp() });
+                        enterApp(userIn);
+                    }
                 } else {
-                    await setDoc(userRef, { password: passIn, createdAt: serverTimestamp() });
-                    enterApp(userIn);
+                    if (userSnap.exists() && userSnap.data().password === passIn) {
+                        enterApp(userIn);
+                    } else {
+                        errorEl.textContent = "名前またはパスワードが正しくありません。";
+                        errorEl.classList.remove('hidden');
+                    }
                 }
-            } else {
-                if (userSnap.exists() && userSnap.data().password === passIn) {
-                    enterApp(userIn);
-                } else {
-                    errorEl.textContent = "名前またはパスワードが正しくありません。";
-                    errorEl.classList.remove('hidden');
-                }
+            } catch (err) {
+                errorEl.textContent = "通信エラーが発生しました。設定を確認してください。";
+                errorEl.classList.remove('hidden');
+                console.error(err);
             }
         };
 
